@@ -17,8 +17,7 @@ def valid_tiktok_url(url):
 
 @app.get("/")
 def home():
-    return render_template("index.html")
-
+return send_file("index.html")
 @app.post("/api/download")
 def download():
     data = request.get_json(silent=True) or {}
