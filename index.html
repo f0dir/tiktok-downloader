@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101014">
+<title>حمّل مقطعك</title>
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#19191f;--line:#30303a;--muted:#a5a5b2;--white:#f7f7fa;--pink:#ff315d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#29202a 0%,var(--bg) 55%);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--white);display:grid;place-items:center;padding:24px}
+main{width:min(100%,560px)}.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:30px}.logo{width:44px;height:44px;border-radius:14px;background:var(--pink);display:grid;place-items:center;font-size:23px;font-weight:800}.brand strong{font-size:20px}
+h1{text-align:center;font-size:clamp(28px,6vw,40px);margin:0 0 12px} .sub{text-align:center;color:var(--muted);line-height:1.8;margin:0 auto 28px;max-width:420px}
+.card{background:rgba(25,25,31,.94);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 22px 70px #0005}
+label{display:block;font-size:14px;color:#d6d6df;margin-bottom:10px}.inputrow{display:flex;gap:9px}
+input{min-width:0;flex:1;background:#101015;border:1px solid #3a3a46;border-radius:13px;padding:15px;color:white;font:inherit;direction:ltr;text-align:left;outline:none}
+input:focus{border-color:var(--pink)}button{border:0;border-radius:13px;background:var(--pink);color:white;font:inherit;font-weight:700;padding:0 20px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.hint{font-size:12px;color:var(--muted);margin:12px 2px 0;line-height:1.7}.status{display:none;margin-top:16px;padding:13px 14px;border-radius:12px;background:#24242d;line-height:1.7;font-size:14px}.status.show{display:block}.status.error{color:#ff9eae}.status.ok{color:#a9f0c3}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.feature{border:1px solid var(--line);border-radius:14px;padding:13px 8px;text-align:center;color:#d8d8e0;font-size:12px}.feature b{display:block;font-size:19px;margin-bottom:5px}
+footer{text-align:center;color:#777784;font-size:11px;line-height:1.8;margin-top:22px}
+@media(max-width:440px){.inputrow{flex-direction:column}button{padding:14px}.features{gap:7px}.feature{font-size:11px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><div class="logo">♪</div><strong>حمّل مقطعك</strong></div>
+  <h1>فيديو TikTok بجودته المتاحة</h1>
+  <p class="sub">الصق رابط المقطع، وسنحاول جلب أفضل نسخة متاحة للتحميل.</p>
+  <section class="card">
+    <label for="url">رابط مقطع TikTok</label>
+    <div class="inputrow">
+      <input id="url" type="url" placeholder="https://www.tiktok.com/..." autocomplete="off">
+      <button id="go">تحميل الفيديو</button>
+    </div>
+    <p class="hint">تأكد أن المقطع عام وأن لديك الحق في تنزيله واستخدامه. توفر نسخة بلا علامة مائية يعتمد على النسخة التي يتيحها المصدر.</p>
+    <div id="status" class="status" role="status"></div>
+    <div class="features">
+      <div class="feature"><b>HD</b>أفضل جودة متاحة</div>
+      <div class="feature"><b>↓</b>تنزيل مباشر</div>
+      <div class="feature"><b>↗</b>واجهة بسيطة</div>
+    </div>
+  </section>
+  <footer>هذه نسخة أولية تحتاج إلى تشغيل الخادم أو نشره على استضافة. لا ترفع مقاطع خاصة أو لا تملك حق استخدامها.</footer>
+</main>
+<script>
+const input=document.getElementById('url'), button=document.getElementById('go'), statusBox=document.getElementById('status');
+button.addEventListener('click', async()=>{
+  const url=input.value.trim();
+  statusBox.className='status'; statusBox.textContent='';
+  if(!url){statusBox.textContent='الصق رابط المقطع أولاً.';statusBox.classList.add('show','error');return;}
+  button.disabled=true;button.textContent='جارٍ التحميل…';
+  statusBox.textContent='جارٍ جلب الفيديو. قد يستغرق ذلك بعض الوقت…';statusBox.classList.add('show');
+  try{
+    const response=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const type=response.headers.get('content-type')||'';
+    if(!response.ok || type.includes('application/json')){
+      const data=await response.json().catch(()=>({}));
+      throw new Error(data.error||'تعذّر تحميل الفيديو.');
+    }
+    const blob=await response.blob(), objectUrl=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=objectUrl;a.download='tiktok_video.mp4';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);
+    statusBox.textContent='بدأ تنزيل الفيديو على جهازك.';statusBox.className='status show ok';
+  }catch(e){statusBox.textContent=e.message;statusBox.className='status show error';}
+  finally{button.disabled=false;button.textContent='تحميل الفيديو';}
+});
+input.addEventListener('keydown',e=>{if(e.key==='Enter')button.click()});
+</script>
+</body>
+</html>
